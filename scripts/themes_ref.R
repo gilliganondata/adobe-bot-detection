@@ -1,6 +1,6 @@
 default_theme <-   theme_bw() +
   theme(axis.text = element_text(size = 10),
-        axis.title = element_text(size = 10),
+        axis.title = element_blank(),
         axis.ticks = element_blank(),
         axis.line.x = element_blank(),
         axis.line.y = element_blank(),
@@ -14,5 +14,5 @@ default_theme <-   theme_bw() +
         panel.grid.minor = element_blank(),
         strip.background = element_blank(),
         strip.text = element_blank(),
-        panel.spacing.y = unit(1, "cm")
+        panel.spacing.y = unit(1.5, "cm")
   )
