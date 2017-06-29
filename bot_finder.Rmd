@@ -3,8 +3,8 @@ title: "Bot Finder"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r get_data, include=FALSE}
@@ -23,14 +23,17 @@ end_date <- (Sys.Date() - as.POSIXlt(Sys.Date())$wday - 1) %>%
   as.character()
 # end_date <- "2017-05-13"
 
-# Set the start date to be six weeks before the end date
-start_date <- as.character(as.Date(end_date) - 41) 
+# How many weeks should be included?
+num_weeks <- 6
+
+# Set the start date to be 6 weeks before the end date
+start_date <- as.character(as.Date(end_date) - 7 * num_weeks + 1) 
 
 trend_metrics = c("visits", "orders")
 
 # Set the elements to be used to look for bots. These ALL need to have
 # subrelations enabled.
-check_elements = c("operatingsystem","browser", "domain")
+check_elements = c("operatingsystem","browser", "domain", "geocountry")
 
 # We can't just throw all of these elements into an API call, as, the longer the
 # list, the more likely it is to bork. So, we're going to be a bit brute force and
@@ -71,6 +74,15 @@ trended_data <- QueueTrended(rsid,
 # Convert the datetime from POSIXlt to Date. Has it always come back as POSIXlt?
 trended_data$datetime <- as.Date(trended_data$datetime)
 
+# A little quirk here. IF there is only a single dimension being evaluated,
+# then the name of the dimension column is "name." If multiple elements are
+# being evaluated, then the dimension columns are the names of each element.
+# So, for everything else to work, we need to rename "name" to be the name
+# of the dimension.
+if(length(trend_elements) == 1){
+  names(trended_data) <- gsub("^name$", trend_elements, names(trended_data))
+}
+
 # If almost no orders have been placed, then it's not a probable bot
 no_orders_data <- trended_data %>%
   filter(orders == 0)
@@ -84,6 +96,7 @@ if(nrow(no_orders_data) == 0){
 # of standard evaluation here (select_()) -- that's because we want to be able to try
 # out different combinations of elements/dimensions, and that's needed to pass in 
 # a vector of elements -- using .dots.
+
 visits_data <- no_orders_data %>%
   select_("datetime", .dots = trend_elements, "visits")
 
@@ -102,6 +115,11 @@ find_deviations <- visits_data %>%
   left_join(find_min_max) %>%
   mutate(deviation = ifelse(visits > max, TRUE, FALSE)) %>%
   filter(deviation == TRUE & visits > 150) 
+
+# Again... if we've eliminated everything, then go ahead and exit
+if(nrow(find_deviations) == 0){
+  return(NULL)
+}
 
 # We need one list that has just the unique combinations of the elements
 deviation_combos <- find_deviations %>% 
@@ -144,12 +162,12 @@ final_plot <- ggplot(final_data, mapping = aes(x=datetime, y=visits)) +
 
 ## Possible Bots
 
-```{r output, message=FALSE, warning=FALSE, echo=FALSE, results='hide', fig.width=7.5}
+```{r output, message=FALSE, warning=FALSE, echo=FALSE, results='hide'}
 
 final_plots <- lapply(elements_list, look_for_bots)
 
 # Some of the checks won't return any results, so let's remove the NULL elements
-final_plots <-  final_plots[-which(sapply(final_plots, is.null))]
+final_plots <- final_plots[-which(sapply(final_plots, is.null))]
 
 # And...output!
 final_plots
