@@ -1,9 +1,9 @@
 ---
-title: "Bot Finder"
+title: "Possible Bots"
 output: html_document
 ---
 
-```{r setup}
+```{r setup, echo=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load libraries
 library(tidyverse)
 library(RSiteCatalyst)
+library(splitstackshape)
 
 # Load the theme
 source("./scripts/themes_ref.R")
@@ -125,52 +126,64 @@ if(nrow(find_deviations) == 0){
 deviation_combos <- find_deviations %>% 
   group_by_(.dots = trend_elements) %>%
   summarise()
-    
+
+# Some weeks may have zero visits for the combination. We want to make sure they still
+# have a record and are recorded as "0," so make a data frame that has all weeks
+# for each combination with a deviation
+deviation_combos <- deviation_combos %>% 
+  expandRows(deviation_combos, count = num_weeks, count.is.col = FALSE) %>%
+  mutate(datetime = seq.Date(from = as.Date(start_date),
+                             by = "week", length.out = num_weeks))
+
 # Join this back to the full data set so we have all of the data and can see the spike.
-# First, join just to get all the data, then join again to get TRUE/FALSE on deviations.
-# Then, mash together the dimensions into a single value
+# Then, mash things together to get the deviation values in a separate column so they
+# can be highlighted in the plot.
 final_data <- deviation_combos %>%
-  left_join(visits_data) %>% 
+  left_join(visits_data) %>%
+  mutate(visits = ifelse(is.na(visits), 0, visits)) %>%
+  mutate(datetime = as.Date(datetime)) %>%
   left_join(find_deviations) %>% 
   mutate(deviation = ifelse(is.na(deviation), NA, visits)) %>% 
-  unite_("combined_dims", trend_elements, sep = " > ")
+  unite_("combined_dims", trend_elements, sep = " > ") %>%
+  select(-min, -max)
 
-# Do a little sorting -- ultimately, want to visualize from highest to lowest traffic
-sort_order <- final_data %>% 
-  group_by(combined_dims) %>% 
-  summarise(total_visits = sum(visits)) %>% 
-  arrange(-total_visits)
+# We want to plot each combination with a deviation separately, so we need to split
+# this data frame into a list with each element being a data frame for each unique
+# combined_dims value.
+final_data_list <- final_data %>% 
+  split(final_data$combined_dims)
+  
 
-# Convert combined_dims to a factor so we get the order we want
-final_data$combined_dims <- factor(final_data$combined_dims,
-                                   levels = sort_order$combined_dims)
+# Function to plot the data frame passed in
+plot_data <- function(df){
+  data_plot <- ggplot(df, mapping = aes(x=datetime, y=visits)) +
+    geom_bar(stat = "identity", fill = "gray80") +
+    geom_bar(stat = "identity", mapping = aes(y=deviation), fill = "darkred") +
+    ggtitle(paste0(df$combined_dims[[1]],"\n(",
+                   paste(trend_elements, collapse=" > "),
+                   ")")) +
+    default_theme
+}
 
-# Plot it!
-final_plot <- ggplot(final_data, mapping = aes(x=datetime, y=visits)) +
-  geom_bar(stat = "identity", fill = "gray80") +
-  geom_bar(stat = "identity", mapping = aes(y=deviation), fill = "darkred") +
-  geom_label(mapping = aes(x = median(unique(visits_data$datetime)), 
-                          y = max(final_data$visits) * 1.1, label = combined_dims),
-             label.r = unit(0, "lines"),
-             label.size = 0) +
-  facet_grid(combined_dims ~ .) +
-  default_theme
+# Generate the plots -- each element in the list is a data frame that
+# needs to be plotted. The returned result will be a list of plots
+plots_list <- lapply(final_data_list, plot_data)
 
 }
 
 ```
 
-## Possible Bots
+The plots below show all of the individual and dual combinations of `r paste0(paste(check_elements[1:length(check_elements)-1], collapse=", "),", and ", check_elements[length(check_elements)])` based on visits for the last `r num_weeks` weeks that had an anomaly in 0-order traffic from the Direct last touch channel. These are all possible bots.
 
-```{r output, message=FALSE, warning=FALSE, echo=FALSE, results='hide'}
+```{r output, message=FALSE, warning=FALSE, echo=FALSE, results='hide', fig.height=2.5, fig.width=7.5}
 
 final_plots <- lapply(elements_list, look_for_bots)
 
 # Some of the checks won't return any results, so let's remove the NULL elements
 final_plots <- final_plots[-which(sapply(final_plots, is.null))]
 
+
 # And...output!
 final_plots
-
 ```
 
