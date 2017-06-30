@@ -2,7 +2,7 @@ default_theme <-   theme_bw() +
   theme(plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
         plot.margin = margin(1.5,0,0,0,"cm"),
         axis.text = element_text(size = 10),
-        axis.title = element_blank(),
+         axis.title = element_blank(),
         axis.ticks = element_blank(),
         axis.line.x = element_blank(),
         axis.line.y = element_blank(),
@@ -13,7 +13,4 @@ default_theme <-   theme_bw() +
         panel.border = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.major.y = element_line(size=0.5, colour = "gray90"),
-        panel.grid.minor = element_blank(),
-        strip.background = element_blank(),
-        strip.text = element_blank(),
-        panel.spacing.y = unit(1.5, "cm"))
+        panel.grid.minor = element_blank())

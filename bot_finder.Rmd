@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(RSiteCatalyst)
 library(splitstackshape)
+library(scales)
 
 # Load the theme
 source("./scripts/themes_ref.R")
@@ -54,7 +55,6 @@ SCAuth(adobe_key, adobe_secret)
 # Vector of segment IDs to apply to data when pulling. The two below are
 # `No Punchouts or Bots` and `Last Touch Channel = Direct` and `Exclude: Identified Bots`
 segment_ids <- c("537ce3d0e4b083ab6f5eccbd","s300000270_58571c53e4b0374f4d0c19d0", "s300000270_595401b317a04517c5a37365")
-# segment_ids <- ""
 
 ####################
 # Main function to pull and process the data. The output of the function is a
@@ -97,7 +97,6 @@ if(nrow(no_orders_data) == 0){
 # of standard evaluation here (select_()) -- that's because we want to be able to try
 # out different combinations of elements/dimensions, and that's needed to pass in 
 # a vector of elements -- using .dots.
-
 visits_data <- no_orders_data %>%
   select_("datetime", .dots = trend_elements, "visits")
 
@@ -128,12 +127,18 @@ deviation_combos <- find_deviations %>%
   summarise()
 
 # Some weeks may have zero visits for the combination. We want to make sure they still
-# have a record and are recorded as "0," so make a data frame that has all weeks
-# for each combination with a deviation
+# have a record and are recorded as "0," so we're doing to do some clunky steps to make
+# sure we have a row for every dimension combination AND every week being included.
+# This CAN'T be the best way to do this, but I gave up trying to find something cleaner.
+datetime_col <- data.frame(datetime = 
+                    rep(seq.Date(from = as.Date(start_date),
+                             by = "week", length.out = num_weeks), 
+                        times = nrow(deviation_combos)))
+
 deviation_combos <- deviation_combos %>% 
-  expandRows(deviation_combos, count = num_weeks, count.is.col = FALSE) %>%
-  mutate(datetime = seq.Date(from = as.Date(start_date),
-                             by = "week", length.out = num_weeks))
+  expandRows(deviation_combos, count = num_weeks, count.is.col = FALSE)
+
+deviation_combos$datetime <- datetime_col$datetime
 
 # Join this back to the full data set so we have all of the data and can see the spike.
 # Then, mash things together to get the deviation values in a separate column so they
@@ -152,7 +157,6 @@ final_data <- deviation_combos %>%
 # combined_dims value.
 final_data_list <- final_data %>% 
   split(final_data$combined_dims)
-  
 
 # Function to plot the data frame passed in
 plot_data <- function(df){
@@ -162,6 +166,10 @@ plot_data <- function(df){
     ggtitle(paste0(df$combined_dims[[1]],"\n(",
                    paste(trend_elements, collapse=" > "),
                    ")")) +
+    scale_x_date(labels = date_format("%m/%d/%Y"),
+                 breaks = seq.Date(from = as.Date(start_date),
+                             by = "week", length.out = num_weeks),
+                 limits = c(as.Date(start_date), NA)) +
     default_theme
 }
 
