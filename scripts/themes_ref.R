@@ -1,8 +1,9 @@
 default_theme <-   theme_bw() +
   theme(plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
         plot.margin = margin(1.5,0,0,0,"cm"),
-        axis.text = element_text(size = 10),
-         axis.title = element_blank(),
+        axis.text.x = element_text(size = 10, margin = margin(t=0.3, unit="cm")),
+        axis.text.y = element_text(size = 10),
+        axis.title = element_blank(),
         axis.ticks = element_blank(),
         axis.line.x = element_blank(),
         axis.line.y = element_blank(),
