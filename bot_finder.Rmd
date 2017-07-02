@@ -45,9 +45,9 @@ elements_list <- c(as.list(check_elements),combn(check_elements, 2, simplify=FAL
 # elements_list <- combn(check_elements, 2, simplify=FALSE)
 
 # Get authentication credentials
-adobe_key = Sys.getenv("ADOBE_API_USERNAME_MSC")
-adobe_secret = Sys.getenv("ADOBE_API_SECRET_MSC")
-rsid = Sys.getenv("ADOBE_RSID_MSC")
+adobe_key = Sys.getenv("ADOBE_API_USERNAME_M")
+adobe_secret = Sys.getenv("ADOBE_API_SECRET_M")
+rsid = Sys.getenv("ADOBE_RSID_M")
 
 # Authenticate
 SCAuth(adobe_key, adobe_secret)
