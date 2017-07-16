@@ -1,6 +1,6 @@
 ---
 title: "Possible Bots"
-output: html_document
+output: html_notebook
 ---
 
 ```{r setup, echo=FALSE}
@@ -61,6 +61,9 @@ segment_ids <- c("537ce3d0e4b083ab6f5eccbd","s300000270_58571c53e4b0374f4d0c19d0
 ####################
 
 look_for_bots <- function(trend_elements){
+  
+# Output to the console which trend_elements are being tried
+  cat(trend_elements)
 
 # Get the data
 trended_data <- QueueTrended(rsid,
