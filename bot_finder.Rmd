@@ -12,9 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 # an apparent bot has emerged
 
 # Load libraries
-library(tidyverse)
-library(RSiteCatalyst)
-library(splitstackshape)
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, RSiteCatalyst, splitstackshape)
 
 # Load the theme
 source("./scripts/themes_ref.R")
